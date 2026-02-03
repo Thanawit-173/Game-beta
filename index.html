@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frosch Game Demo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Press Start 2P (Pixel Font) -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Google Font: Sarabun (For Thai Text readability) -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #5c946e;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .thai-font {
+            font-family: 'Sarabun', sans-serif;
+            letter-spacing: 0.5px;
+            font-weight: bold;
+        }
+
+        /* Scanline Effect */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; pointer-events: none; z-index: 50;
+        }
+
+        /* Pixel Pattern */
+        .pixel-bg {
+            background-color: #63c74d;
+            background-image: linear-gradient(45deg, #5ab546 25%, transparent 25%), 
+                linear-gradient(-45deg, #5ab546 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #5ab546 75%), 
+                linear-gradient(-45deg, transparent 75%, #5ab546 75%);
+            background-size: 20px 20px;
+        }
+
+        /* Box Styles */
+        .pixel-box {
+            background-color: #fff;
+            border: 4px solid #2d2d2d;
+            box-shadow: 4px 4px 0px #000000;
+        }
+
+        .pixel-btn {
+            background-color: #e4e4e4;
+            border: 2px solid #2d2d2d;
+            box-shadow: 2px 2px 0px #000000;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .pixel-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #000000; }
+        .pixel-btn:hover { background-color: #fff; }
+        .pixel-btn:disabled { background-color: #888; color: #555; cursor: not-allowed; }
+
+        /* Card Styles */
+        .card {
+            width: 36px; height: 50px;
+            background: white;
+            border: 2px solid black;
+            border-radius: 4px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+            margin-right: 4px;
+            flex-shrink: 0;
+            user-select: none;
+            font-size: 10px;
+        }
+        .card:hover { transform: translateY(-3px); border-color: #555; }
+        .card-red { color: #d32f2f; border-bottom: 4px solid #d32f2f; }
+        .card-blue { color: #1976d2; border-bottom: 4px solid #1976d2; }
+
+        /* Special Card in Shop */
+        .shop-card {
+            width: 80px; height: 110px;
+            border: 4px solid #2d2d2d;
+            background: white;
+            cursor: pointer;
+            transition: transform 0.1s;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: space-between;
+            padding: 4px;
+        }
+        .shop-card:hover { transform: scale(1.05); border-color: #fbbf24; }
+        .shop-card img { width: 100%; height: 60px; object-fit: cover; border: 2px solid #000; }
+
+        /* Pairing Slot Styles */
+        .pairing-slot {
+            width: 82px; height: 60px;
+            background-color: #f0f0f0;
+            border: 2px dashed #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            padding: 2px;
+            flex-shrink: 0;
+        }
+        
+        .empty-slot-placeholder {
+            font-size: 8px; color: #ccc; text-align: center;
+        }
+
+        /* Animations */
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        .logo-float { animation: float 3s ease-in-out infinite; }
+
+        /* Layout Grid Helpers */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            grid-template-rows: 100%;
+            height: 100%;
+            gap: 12px;
+            padding: 12px;
+        }
+        
+        .left-panel { display: flex; flex-direction: column; gap: 12px; }
+        .right-panel { display: flex; flex-direction: column; gap: 12px; }
+    </style>
+</head>
+<body class="h-screen w-screen pixel-bg relative text-gray-800 overflow-hidden">
+
+    <div class="scanlines"></div>
+
+    <!-- === MAIN MENU === -->
+    <div id="main-menu" class="flex flex-col items-center justify-center h-full w-full z-10 absolute inset-0 bg-[#5c946e]">
+        <div class="relative group mb-6">
+            <div class="w-40 h-40 md:w-56 md:h-56 rounded-full border-4 border-black overflow-hidden shadow-xl bg-black logo-float relative z-10">
+                <img src="https://i.postimg.cc/GhhbnkBH/583291215-2616821948685851-1461723309979909926-n-Copy.jpg" 
+                     class="w-full h-full object-cover" style="image-rendering: pixelated;">
+            </div>
+        </div>
+        <h1 class="text-3xl md:text-5xl text-white drop-shadow-[4px_4px_0_rgba(0,0,0,1)] tracking-wider mb-8">FROSCH</h1>
+        <div class="flex flex-col gap-4 w-64">
+            <button onclick="openPlayModal()" class="pixel-btn py-4 text-center font-bold text-lg">PLAY</button>
+            <button onclick="alert('Settings Demo')" class="pixel-btn py-4 text-center font-bold text-lg">SETTING</button>
+            <button onclick="location.reload()" class="pixel-btn py-4 text-center font-bold text-lg bg-red-100">QUIT</button>
+        </div>
+    </div>
+
+    <!-- === PLAY SETUP MODAL === -->
+    <div id="play-modal" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white border-4 border-black p-6 max-w-sm w-full shadow-[8px_8px_0_rgba(0,0,0,0.5)] relative">
+            <button onclick="closePlayModal()" class="absolute top-2 right-3 text-red-500 font-bold text-xl">x</button>
+            <div class="bg-gray-200 border-2 border-black p-3 text-center mb-6 shadow-[2px_2px_0_#000]">
+                <span class="text-sm font-bold tracking-wide">YOUR GAME</span>
+            </div>
+            <div onclick="togglePhysics()" class="flex items-center justify-between border-2 border-black p-4 mb-8 cursor-pointer hover:bg-green-50">
+                <span class="text-sm">Physics 101</span>
+                <div class="w-8 h-8 border-2 border-black bg-white flex items-center justify-center">
+                    <div id="physics-check-mark" class="w-4 h-4 bg-green-600 hidden"></div>
+                </div>
+            </div>
+            <button onclick="startGame()" class="w-full pixel-btn py-3 bg-green-200 hover:bg-green-300">Start Mission</button>
+        </div>
+    </div>
+
+    <!-- === SHOP SCREEN (New) === -->
+    <div id="shop-screen" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#5c946e]">
+        <div class="pixel-box p-6 w-full max-w-2xl bg-white relative">
+            <h2 class="text-2xl text-center mb-4 border-b-4 border-black pb-2">CARD SHOP</h2>
+            
+            <div class="absolute top-4 right-4 bg-yellow-100 border-2 border-black px-3 py-1 font-bold flex items-center gap-2">
+                <span>COINS:</span>
+                <span id="shop-coin-display" class="text-xl text-yellow-600">0</span>
+            </div>
+
+            <!-- Products -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <!-- Card 1 -->
+                <div onclick="buyCard(0)" class="shop-card">
+                    <img src="https://i.postimg.cc/zBZzgvJF/616582654-1845976526121757-2424282358098711947-n.jpg">
+                    <div class="text-[8px] font-bold text-center">FROG KING</div>
+                    <div class="bg-yellow-300 px-2 text-[10px] border border-black font-bold">$1</div>
+                </div>
+                <!-- Card 2 -->
+                <div onclick="buyCard(1)" class="shop-card">
+                    <img src="https://i.postimg.cc/NMqsHFg7/617385715-873375368812145-944176384993460765-n.jpg">
+                    <div class="text-[8px] font-bold text-center">CYBER FROG</div>
+                    <div class="bg-yellow-300 px-2 text-[10px] border border-black font-bold">$1</div>
+                </div>
+                <!-- Card 3 -->
+                <div onclick="buyCard(2)" class="shop-card">
+                    <img src="https://i.postimg.cc/43h4yVT6/IMG-2905.jpg">
+                    <div class="text-[8px] font-bold text-center">ANCIENT</div>
+                    <div class="bg-yellow-300 px-2 text-[10px] border border-black font-bold">$1</div>
+                </div>
+                <!-- Card 4 -->
+                <div onclick="buyCard(3)" class="shop-card">
+                    <img src="https://i.postimg.cc/wBJtPSMb/f47d4389-dcaf-4f97-9531-6c4a2994293e.png">
+                    <div class="text-[8px] font-bold text-center">GHOST FROG</div>
+                    <div class="bg-yellow-300 px-2 text-[10px] border border-black font-bold">$1</div>
+                </div>
+            </div>
+
+            <!-- Inventory -->
+            <div class="border-t-4 border-black pt-4">
+                <h3 class="text-sm mb-2 text-center thai-font">กระเป๋าการ์ด (Inventory) - Max 5</h3>
+                <p class="text-[10px] text-center text-red-500 mb-2 thai-font">*คลิกที่การ์ดเพื่อขายทิ้ง (Sell to free space)*</p>
+                <div id="shop-inventory" class="flex gap-2 justify-center h-20 bg-gray-100 border-2 border-gray-300 p-2">
+                    <!-- Inventory slots injected here -->
+                </div>
+            </div>
+
+            <button onclick="closeShopAndRestart()" class="w-full mt-6 pixel-btn py-3 bg-green-300 font-bold">PLAY AGAIN >></button>
+        </div>
+    </div>
+
+    <!-- === GAME SCREEN === -->
+    <div id="game-screen" class="hidden absolute inset-0 z-20 layout-grid max-w-7xl mx-auto pt-4 pb-4">
+        
+        <!-- LEFT COLUMN -->
+        <div class="left-panel">
+            <!-- Mission Box -->
+            <div class="pixel-box p-4 h-1/3 flex flex-col items-center justify-center text-center">
+                <h2 class="text-sm text-gray-500 mb-2">MISSION 101</h2>
+                <div class="border-4 border-gray-400 p-2 w-full bg-white">
+                    <span id="mission-text" class="text-xl md:text-2xl font-bold">0/300</span>
+                    <div class="text-[10px] text-gray-400">Target: 300</div>
+                </div>
+            </div>
+
+            <!-- Stats/Control Grid Box -->
+            <div class="pixel-box p-2 h-2/3 grid grid-cols-2 grid-rows-4 gap-2 text-[10px]">
+                <button class="pixel-btn bg-yellow-100 flex items-center justify-center font-bold">Formula</button>
+                
+                <div class="flex flex-col items-center justify-center border-2 border-black bg-gray-100">
+                    <span class="text-blue-600 font-bold mb-1">Hand</span>
+                    <span id="hand-count" class="text-xl font-bold bg-white px-2 border border-gray-400">4</span>
+                </div>
+
+                <button class="pixel-btn bg-gray-200 flex items-center justify-center font-bold">Setting</button>
+
+                <div class="flex flex-col items-center justify-center border-2 border-black bg-gray-100">
+                    <span class="text-red-500 font-bold mb-1">Dis</span>
+                    <span id="discard-count" class="text-xl font-bold bg-white px-2 border border-gray-400">3</span>
+                </div>
+
+                <div class="col-span-2 flex items-center justify-center bg-green-100 border-2 border-black mt-2">
+                    <span class="font-bold text-lg text-green-800">$ <span id="money-display">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="right-panel">
+            
+            <!-- Top: Special Box (Displays Inventory) -->
+            <div class="pixel-box h-24 w-full flex items-center justify-center relative bg-purple-50">
+                <span class="absolute top-1 left-2 text-[10px] text-purple-800 font-bold">Special Inventory</span>
+                <div id="game-special-display" class="flex gap-2 items-center justify-center w-full px-2">
+                    <div class="text-gray-300 text-xs text-center thai-font">ยังไม่มีการ์ดพิเศษ</div>
+                </div>
+            </div>
+
+            <!-- Middle: Simulation Canvas -->
+            <div class="pixel-box flex-1 w-full bg-sky-200 relative overflow-hidden shadow-inner min-h-[150px]">
+                <div class="absolute top-2 left-2 bg-white/80 p-2 border border-black z-10 rounded">
+                    <p class="text-[10px] thai-font">ภารกิจ: ทำให้ค่าที่คำนวณได้เท่ากับ 300</p>
+                </div>
+                <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+            </div>
+
+            <!-- Bottom: Gameplay Area -->
+            <div class="h-64 w-full relative">
+                
+                <!-- PHASE 1: Dialogue -->
+                <div id="phase-dialogue" class="absolute inset-0 flex gap-4 h-full pb-2">
+                    <div class="pixel-box flex-1 p-4 bg-white flex flex-col relative h-full">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-black text-white px-2 py-0.5 text-[10px] border border-white">Phaya Aung</span>
+                            <h3 class="text-blue-600 text-xs font-bold thai-font">อึ๋งนิวตัน:</h3>
+                        </div>
+                        
+                        <div id="dialogue-text" class="text-xs leading-6 thai-font text-gray-700 h-24 overflow-y-auto">
+                            <!-- Text injected by JS -->
+                        </div>
+
+                        <div class="absolute bottom-4 right-4 flex gap-2">
+                             <button onclick="nextDialogue()" id="btn-next-dialogue" class="pixel-btn px-4 py-2 text-xs font-bold bg-yellow-100">ถัดไป (Next)</button>
+                             <button onclick="startGameplayPhase()" id="btn-start-game" class="hidden pixel-btn px-4 py-2 text-xs font-bold bg-green-200">เริ่มเกม >></button>
+                        </div>
+                    </div>
+                    <div class="w-32 flex-shrink-0 relative h-full flex items-end">
+                        <div class="w-32 h-32 rounded-full border-4 border-black overflow-hidden bg-white shadow-lg relative z-10">
+                            <img src="https://i.postimg.cc/GhhbnkBH/583291215-2616821948685851-1461723309979909926-n-Copy.jpg" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PHASE 2: Card Gameplay -->
+                <div id="phase-gameplay" class="hidden absolute inset-0 flex flex-col gap-2 h-full pb-2">
+                    
+                    <!-- Equation & Staging Area -->
+                    <div class="pixel-box bg-yellow-50 p-2 flex items-center h-20 gap-2">
+                        <!-- Formula Select -->
+                        <div class="w-48 flex-shrink-0">
+                            <select id="formula-select" class="pixel-btn text-[10px] w-full h-full py-2 font-mono">
+                                <option value="">--เลือก 5 สูตรหลัก--</option>
+                                <option value="1">1. v = u + at</option>
+                                <option value="2">2. s = (u + v)t / 2</option>
+                                <option value="3">3. s = ut + ½at²</option>
+                                <option value="4">4. s = vt - ½at²</option>
+                                <option value="5">5. v² = u² + 2as</option>
+                            </select>
+                        </div>
+
+                        <!-- Pairing Slots -->
+                        <div id="pairing-area" class="flex-1 flex gap-1 justify-center items-center bg-white border-2 border-gray-300 p-1 rounded overflow-x-auto">
+                            <!-- Slots generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Card Decks (Variables & Numbers) -->
+                    <div class="flex-1 flex gap-2 h-24">
+                        <div class="flex-1 pixel-box bg-blue-50 p-1 flex flex-col relative">
+                            <span class="absolute top-0 left-1 text-[8px] text-blue-400 font-bold">VARIABLES</span>
+                            <div id="var-cards-container" class="flex-1 flex items-center overflow-x-auto px-2 mt-2"></div>
+                        </div>
+                        <div class="flex-1 pixel-box bg-red-50 p-1 flex flex-col relative">
+                            <span class="absolute top-0 left-1 text-[8px] text-red-400 font-bold">NUMBERS</span>
+                            <div id="num-cards-container" class="flex-1 flex items-center overflow-x-auto px-2 mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div class="h-10 flex gap-2 justify-end">
+                        <button onclick="discardStaged()" class="pixel-btn bg-yellow-200 w-32 text-[10px] font-bold flex flex-col items-center justify-center leading-tight">
+                            <span>DISCARD STAGED</span>
+                            <span class="text-[8px] font-normal text-gray-600">(<span id="btn-discard-count">3</span> left)</span>
+                        </button>
+                        <button onclick="playHand()" class="pixel-btn bg-green-400 w-32 text-xs font-bold hover:bg-green-300 border-green-600">
+                            PLAY HAND!
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- WIN MODAL -->
+    <div id="win-modal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-yellow-400/90 backdrop-blur-sm">
+        <div class="bg-white border-4 border-black p-8 text-center shadow-2xl max-w-md w-full">
+            <h1 class="text-4xl mb-4 font-bold text-yellow-600 drop-shadow-md">YOU WIN!</h1>
+            
+            <div class="bg-gray-100 p-4 border-2 border-black mb-6 text-left">
+                <p class="mb-2 font-bold underline">REWARDS:</p>
+                <div class="flex justify-between mb-1">
+                    <span>Hands Left (<span id="win-hands">0</span>):</span>
+                    <span class="text-green-600">+<span id="reward-hands">0</span> Coins</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span>Discards Left (<span id="win-discards">0</span>):</span>
+                    <span class="text-green-600">+<span id="reward-discards">0</span> Coins</span>
+                </div>
+                <div class="border-t border-black pt-2 flex justify-between font-bold text-lg">
+                    <span>TOTAL:</span>
+                    <span class="text-yellow-600">$ <span id="reward-total">0</span></span>
+                </div>
+            </div>
+
+            <button onclick="goToShop()" class="pixel-btn py-4 w-full text-xl font-bold bg-green-300 hover:bg-green-400">
+                NEXT (Go to Shop) >>
+            </button>
+        </div>
+    </div>
+
+    <!-- GAME OVER MODAL -->
+    <div id="game-over-modal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/90">
+        <div class="text-center">
+            <h1 class="text-red-500 text-4xl mb-4 font-bold">YOU LOST</h1>
+            <p class="text-white mb-8 text-sm">Hand cards ran out.</p>
+            <button onclick="restartGame()" class="pixel-btn py-3 px-8 text-xl">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State ---
+        let gameState = {
+            handCount: 4,
+            discardCount: 3,
+            money: 0,
+            missionTarget: 300,
+            specialCards: [] // Array of image URLs
+        };
+
+        const varDeckList = ['S', 'V', 'U', 'T', 'A', 'S', 'V', 'T', 'U', 'A', 'S', 'V'];
+        const numDeckList = ['10', '20', '50', '100', '150', '5', '0', '2', '4', '25', '300'];
+
+        // Shop Data
+        const shopItems = [
+            "https://i.postimg.cc/zBZzgvJF/616582654-1845976526121757-2424282358098711947-n.jpg",
+            "https://i.postimg.cc/NMqsHFg7/617385715-873375368812145-944176384993460765-n.jpg",
+            "https://i.postimg.cc/43h4yVT6/IMG-2905.jpg",
+            "https://i.postimg.cc/wBJtPSMb/f47d4389-dcaf-4f97-9531-6c4a2994293e.png"
+        ];
+
+        let stagingSlots = Array(5).fill().map(() => ({ var: null, num: null }));
+        let calculatedReward = 0;
+
+        // --- Dialogue Data ---
+        const dialogues = [
+            "สวัสดี! ข้าคือพญาอึ๋ง วันนี้เราจะมาเรียนเรื่อง <b>'การเคลื่อนที่แนวตรง'</b> (Linear Motion) ซึ่งเป็นพื้นฐานสำคัญของฟิสิกส์ ม.4 เลยนะ!",
+            "ก่อนอื่นรู้จักตัวแปรกันก่อน:<br><b>u</b> = ความเร็วต้น (m/s)<br><b>v</b> = ความเร็วปลาย (m/s)<br><b>a</b> = ความเร่ง (m/s²)<br><b>t</b> = เวลา (s)<br><b>s</b> = การกระจัด (m)",
+            "หัวใจสำคัญคือ <b>'5 สูตรสุญญากาศ'</b>:<br>1. v = u + at (ไม่ใช้ s)<br>2. s = (u+v)t/2 (ไม่ใช้ a)<br>3. s = ut + ½at² (ไม่ใช้ v)",
+            "ต่อกันเลย:<br>4. s = vt - ½at² (ไม่ใช้ u) *สูตรนี้หายากหน่อย<br>5. v² = u² + 2as (ไม่ใช้ t)<br>จำไว้ว่าแต่ละสูตรขาดตัวแปรไป 1 ตัวเสมอ!",
+            "<b>วิธีการเล่น:</b><br>ภารกิจคือทำค่าให้ได้ <b>300</b><br>1. ดูไพ่ในมือว่ามีตัวแปรอะไรบ้าง<br>2. เลือกสูตรที่เหมาะสมกับตัวแปรนั้น<br>3. จับคู่ตัวแปรกับตัวเลข แล้วกด Play!"
+        ];
+        let currentDialogueIndex = 0;
+
+        // --- DOM Elements ---
+        const mainMenu = document.getElementById('main-menu');
+        const playModal = document.getElementById('play-modal');
+        const gameScreen = document.getElementById('game-screen');
+        const shopScreen = document.getElementById('shop-screen');
+        const phaseDialogue = document.getElementById('phase-dialogue');
+        const phaseGameplay = document.getElementById('phase-gameplay');
+        const varContainer = document.getElementById('var-cards-container');
+        const numContainer = document.getElementById('num-cards-container');
+        const dialogueText = document.getElementById('dialogue-text');
+        
+        // --- Navigation ---
+        function openPlayModal() { playModal.classList.remove('hidden'); }
+        function closePlayModal() { playModal.classList.add('hidden'); }
+        function togglePhysics() { document.getElementById('physics-check-mark').classList.toggle('hidden'); }
+        
+        function startGame() {
+            closePlayModal();
+            mainMenu.classList.add('hidden');
+            shopScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            
+            // Reset for new game loop BUT keep money and special cards
+            gameState.handCount = 4;
+            gameState.discardCount = 3;
+            document.getElementById('mission-text').innerText = "0/300";
+            
+            initCanvas();
+            updateDialogue(); // Reset dialogue or could skip if played before
+            updateStatsUI();
+            updateSpecialCardsDisplay();
+        }
+
+        function restartGame() {
+            // Full Reset (Game Over)
+            location.reload(); 
+        }
+
+        // --- Dialogue System ---
+        function updateDialogue() {
+            dialogueText.innerHTML = dialogues[currentDialogueIndex];
+            const nextBtn = document.getElementById('btn-next-dialogue');
+            const startBtn = document.getElementById('btn-start-game');
+            if (currentDialogueIndex >= dialogues.length - 1) {
+                nextBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                startBtn.classList.add('hidden');
+            }
+        }
+        function nextDialogue() {
+            if (currentDialogueIndex < dialogues.length - 1) {
+                currentDialogueIndex++;
+                updateDialogue();
+            }
+        }
+        function startGameplayPhase() {
+            phaseDialogue.style.display = 'none';
+            phaseGameplay.classList.remove('hidden');
+            dealInitialCards();
+            updateStagingUI();
+        }
+
+        // --- Card System ---
+        function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        function createCard(value, type, index, isStaged = false) {
+            const el = document.createElement('div');
+            el.className = `card ${type === 'var' ? 'card-blue' : 'card-red'}`;
+            el.innerHTML = `<span class="font-bold text-xs pointer-events-none">${value}</span>`;
+            el.onclick = () => {
+                if (!isStaged) moveToStage(value, type, el);
+                else returnToHand(value, type, index);
+            };
+            return el;
+        }
+
+        function dealInitialCards() {
+            varContainer.innerHTML = '';
+            numContainer.innerHTML = '';
+            for(let i=0; i<7; i++) varContainer.appendChild(createCard(getRandomItem(varDeckList), 'var', i));
+            for(let i=0; i<7; i++) numContainer.appendChild(createCard(getRandomItem(numDeckList), 'num', i));
+        }
+
+        function moveToStage(value, type, cardElement) {
+            let slotIndex = -1;
+            for(let i=0; i<stagingSlots.length; i++) {
+                if (type === 'var' && stagingSlots[i].var === null) { slotIndex = i; break; }
+                if (type === 'num' && stagingSlots[i].num === null) { slotIndex = i; break; }
+            }
+            if (slotIndex !== -1) {
+                if (type === 'var') stagingSlots[slotIndex].var = value;
+                else stagingSlots[slotIndex].num = value;
+                cardElement.remove();
+                updateStagingUI();
+            } else {
+                alert("Pairing slots full!");
+            }
+        }
+
+        function returnToHand(value, type, slotIndex) {
+            if (type === 'var') stagingSlots[slotIndex].var = null;
+            else stagingSlots[slotIndex].num = null;
+            if (type === 'var') varContainer.appendChild(createCard(value, 'var', -1));
+            else numContainer.appendChild(createCard(value, 'num', -1));
+            updateStagingUI();
+        }
+
+        function updateStagingUI() {
+            const area = document.getElementById('pairing-area');
+            area.innerHTML = '';
+            stagingSlots.forEach((data, idx) => {
+                const slot = document.createElement('div');
+                slot.className = 'pairing-slot';
+                if (data.var === null && data.num === null) {
+                    slot.innerHTML = `<span class="empty-slot-placeholder">PAIR ${idx+1}</span>`;
+                } else {
+                    if (data.var !== null) slot.appendChild(createCard(data.var, 'var', idx, true));
+                    else slot.innerHTML += `<div class="w-[36px] h-[50px] border border-dashed border-blue-200 text-[8px] flex items-center justify-center text-gray-300">?</div>`;
+                    if (data.num !== null) slot.appendChild(createCard(data.num, 'num', idx, true));
+                    else slot.innerHTML += `<div class="w-[36px] h-[50px] border border-dashed border-red-200 text-[8px] flex items-center justify-center text-gray-300">?</div>`;
+                }
+                area.appendChild(slot);
+            });
+        }
+
+        function discardStaged() {
+            if (gameState.discardCount <= 0) { alert("No discards left!"); return; }
+            let hasCards = false;
+            stagingSlots.forEach((slot, idx) => {
+                if(slot.var || slot.num) { hasCards = true; stagingSlots[idx].var = null; stagingSlots[idx].num = null; }
+            });
+            if(!hasCards) { alert("Put cards in slots to discard."); return; }
+            varContainer.appendChild(createCard(getRandomItem(varDeckList), 'var', -1));
+            numContainer.appendChild(createCard(getRandomItem(numDeckList), 'num', -1));
+            gameState.discardCount--;
+            updateStagingUI();
+            updateStatsUI();
+        }
+
+        function playHand() {
+            if (gameState.handCount <= 0) return;
+            const formulaId = document.getElementById('formula-select').value;
+            if (!formulaId) { alert("Please select a formula!"); return; }
+
+            let assignments = {};
+            stagingSlots.forEach(slot => {
+                if (slot.var && slot.num) assignments[slot.var] = parseInt(slot.num);
+            });
+
+            let u = assignments['U'] || 0;
+            let v = assignments['V'] || 0;
+            let a = assignments['A'] || 0;
+            let t = assignments['T'] || 0;
+            let s = assignments['S'] || 0; 
+            let result = 0;
+
+            if (formulaId === '1') result = u + (a * t);
+            else if (formulaId === '2') result = ((u + v) * t) / 2;
+            else if (formulaId === '3') result = (u * t) + (0.5 * a * (t*t));
+            else if (formulaId === '4') result = (v * t) - (0.5 * a * (t*t));
+            else if (formulaId === '5') {
+                let valSq = (u*u) + (2*a*s);
+                result = valSq < 0 ? 0 : Math.sqrt(valSq);
+            }
+
+            gameState.handCount--;
+            stagingSlots = Array(5).fill().map(() => ({ var: null, num: null }));
+            updateStagingUI();
+            updateStatsUI();
+            animateFrog(result);
+        }
+
+        function updateStatsUI() {
+            document.getElementById('hand-count').innerText = gameState.handCount;
+            document.getElementById('discard-count').innerText = gameState.discardCount;
+            document.getElementById('btn-discard-count').innerText = gameState.discardCount;
+            document.getElementById('money-display').innerText = gameState.money;
+        }
+
+        // --- Win & Shop System ---
+
+        function handleWin() {
+            document.getElementById('win-modal').classList.remove('hidden');
+            
+            // Calculate Rewards
+            const handReward = gameState.handCount * 1; // 1 hand = 1 coin
+            const discardReward = Math.floor(gameState.discardCount / 2); // 2 discards = 1 coin
+            calculatedReward = handReward + discardReward;
+
+            document.getElementById('win-hands').innerText = gameState.handCount;
+            document.getElementById('reward-hands').innerText = handReward;
+            document.getElementById('win-discards').innerText = gameState.discardCount;
+            document.getElementById('reward-discards').innerText = discardReward;
+            document.getElementById('reward-total').innerText = calculatedReward;
+        }
+
+        function goToShop() {
+            gameState.money += calculatedReward;
+            document.getElementById('win-modal').classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            shopScreen.classList.remove('hidden');
+            
+            updateShopUI();
+        }
+
+        function updateShopUI() {
+            document.getElementById('shop-coin-display').innerText = gameState.money;
+            const invContainer = document.getElementById('shop-inventory');
+            invContainer.innerHTML = '';
+
+            // Render Inventory Slots
+            gameState.specialCards.forEach((imgUrl, index) => {
+                const slot = document.createElement('div');
+                slot.className = "w-16 h-22 border-2 border-gray-400 relative bg-white cursor-pointer hover:border-red-500 group";
+                slot.innerHTML = `
+                    <img src="${imgUrl}" class="w-full h-full object-cover opacity-100 group-hover:opacity-50">
+                    <div class="hidden group-hover:flex absolute inset-0 items-center justify-center font-bold text-red-600 text-[10px] bg-white/80">SELL</div>
+                `;
+                slot.onclick = () => sellCard(index);
+                invContainer.appendChild(slot);
+            });
+
+            // Fill Empty Slots
+            for(let i=gameState.specialCards.length; i<5; i++) {
+                const empty = document.createElement('div');
+                empty.className = "w-16 h-22 border-2 border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400";
+                empty.innerText = "EMPTY";
+                invContainer.appendChild(empty);
+            }
+        }
+
+        function buyCard(shopIndex) {
+            if(gameState.money < 1) { alert("Not enough coins!"); return; }
+            if(gameState.specialCards.length >= 5) { alert("Inventory full! Click an owned card to sell/discard."); return; }
+
+            gameState.money -= 1;
+            gameState.specialCards.push(shopItems[shopIndex]);
+            updateShopUI();
+        }
+
+        function sellCard(inventoryIndex) {
+            if(confirm("Sell this card to free up space? (No refund)")) {
+                gameState.specialCards.splice(inventoryIndex, 1);
+                updateShopUI();
+            }
+        }
+
+        function closeShopAndRestart() {
+            // Start Next Level / Restart
+            startGame();
+        }
+
+        function updateSpecialCardsDisplay() {
+            const display = document.getElementById('game-special-display');
+            if (gameState.specialCards.length === 0) {
+                display.innerHTML = '<div class="text-gray-300 text-xs text-center thai-font">ยังไม่มีการ์ดพิเศษ</div>';
+            } else {
+                display.innerHTML = '';
+                gameState.specialCards.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.className = "w-8 h-12 border border-black object-cover bg-white";
+                    display.appendChild(img);
+                });
+            }
+        }
+
+        // --- Canvas & Logic ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let frog = { x: 0, y: 0 };
+
+        function initCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+            frog.x = canvas.width - 60;
+            frog.y = canvas.height - 50;
+            drawGame();
+        }
+
+        function drawGame() {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            ctx.fillStyle = '#81c784'; ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+            ctx.fillStyle = '#555';
+            for(let i=1; i<5; i++) {
+                let xPos = canvas.width - (i * (canvas.width/4));
+                ctx.fillRect(xPos, canvas.height-30, 2, 10);
+                ctx.font = "10px monospace";
+                ctx.fillText((i*75), xPos-10, canvas.height-35);
+            }
+            drawFrog(frog.x, frog.y);
+        }
+
+        function drawFrog(x, y) {
+            ctx.save(); ctx.translate(x, y);
+            ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(-6, -8, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(6, -8, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(-6, -8, 2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(6, -8, 2, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+
+        function animateFrog(calculatedVal) {
+            const startX = canvas.width - 60;
+            const targetDist = 300;
+            const maxPx = canvas.width - 80;
+            
+            let ratio = calculatedVal / targetDist;
+            if (ratio > 1.2) ratio = 1.2;
+            if (isNaN(ratio)) ratio = 0;
+
+            const movePx = maxPx * ratio;
+            const endX = startX - movePx;
+            
+            let startTime = null;
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = (timestamp - startTime) / 1500;
+                
+                if (progress < 1) {
+                    const ease = 1 - Math.pow(1 - progress, 3);
+                    frog.x = startX - (startX - endX) * ease;
+                    drawGame();
+                    if (calculatedVal > 350) {
+                        ctx.fillStyle = `rgba(255, 100, 0, ${Math.random()})`;
+                        ctx.beginPath(); ctx.arc(frog.x, frog.y, 20, 0, Math.PI*2); ctx.fill();
+                    }
+                    requestAnimationFrame(step);
+                } else {
+                    frog.x = endX;
+                    drawGame();
+                    document.getElementById('mission-text').innerText = `${Math.floor(calculatedVal)}/300`;
+                    
+                    setTimeout(() => {
+                        // Win Logic
+                        if (Math.abs(calculatedVal - 300) < 10 || calculatedVal >= 300) { 
+                             // If overshot massively (e.g. > 350), maybe lose? For now, >= 300 is WIN as per request "over or equal"
+                             handleWin();
+                        } else if (gameState.handCount === 0) {
+                             document.getElementById('game-over-modal').classList.remove('hidden');
+                        } else {
+                            frog.x = startX; drawGame(); dealInitialCards();
+                        }
+                    }, 800);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        window.addEventListener('resize', initCanvas);
+        updateStatsUI();
+    </script>
+</body>
+</html>
