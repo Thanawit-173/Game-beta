@@ -399,7 +399,13 @@
         };
 
         const varDeckList = ['S', 'V', 'U', 'T', 'A', 'S', 'V', 'T', 'U', 'A', 'S', 'V'];
-        const numDeckList = ['10', '20', '50', '100', '150', '5', '0', '2', '4', '25', '300'];
+        
+        // Updated Number Deck: 1-10, 100, 1000 (3 copies each)
+        let numDeckList = [];
+        const baseNums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000];
+        for(let i=0; i<3; i++) {
+            numDeckList = numDeckList.concat(baseNums);
+        }
 
         // Shop Data
         const shopItems = [
@@ -526,8 +532,11 @@
         function returnToHand(value, type, slotIndex) {
             if (type === 'var') stagingSlots[slotIndex].var = null;
             else stagingSlots[slotIndex].num = null;
+            
+            // Add back to Hand DOM
             if (type === 'var') varContainer.appendChild(createCard(value, 'var', -1));
             else numContainer.appendChild(createCard(value, 'num', -1));
+
             updateStagingUI();
         }
 
@@ -537,13 +546,31 @@
             stagingSlots.forEach((data, idx) => {
                 const slot = document.createElement('div');
                 slot.className = 'pairing-slot';
+                
+                // If slot is completely empty
                 if (data.var === null && data.num === null) {
                     slot.innerHTML = `<span class="empty-slot-placeholder">PAIR ${idx+1}</span>`;
                 } else {
-                    if (data.var !== null) slot.appendChild(createCard(data.var, 'var', idx, true));
-                    else slot.innerHTML += `<div class="w-[36px] h-[50px] border border-dashed border-blue-200 text-[8px] flex items-center justify-center text-gray-300">?</div>`;
-                    if (data.num !== null) slot.appendChild(createCard(data.num, 'num', idx, true));
-                    else slot.innerHTML += `<div class="w-[36px] h-[50px] border border-dashed border-red-200 text-[8px] flex items-center justify-center text-gray-300">?</div>`;
+                    // Render Var (Left)
+                    if (data.var !== null) {
+                        slot.appendChild(createCard(data.var, 'var', idx, true));
+                    } else {
+                        // Create placeholder using DOM element to prevent innerHTML overwriting events
+                        const p = document.createElement('div');
+                        p.className = "w-[36px] h-[50px] border border-dashed border-blue-200 text-[8px] flex items-center justify-center text-gray-300";
+                        p.innerText = "?";
+                        slot.appendChild(p);
+                    }
+                    
+                    // Render Num (Right)
+                    if (data.num !== null) {
+                        slot.appendChild(createCard(data.num, 'num', idx, true));
+                    } else {
+                        const p = document.createElement('div');
+                        p.className = "w-[36px] h-[50px] border border-dashed border-red-200 text-[8px] flex items-center justify-center text-gray-300";
+                        p.innerText = "?";
+                        slot.appendChild(p);
+                    }
                 }
                 area.appendChild(slot);
             });
