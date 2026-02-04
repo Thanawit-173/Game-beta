@@ -513,6 +513,16 @@
             for(let i=0; i<7; i++) numContainer.appendChild(createCard(getRandomItem(numDeckList), 'num', i));
         }
 
+        // --- NEW: Helper to Refill Cards ---
+        function refillCards(varCount, numCount) {
+            for(let i=0; i<varCount; i++) {
+                varContainer.appendChild(createCard(getRandomItem(varDeckList), 'var', -1));
+            }
+            for(let i=0; i<numCount; i++) {
+                numContainer.appendChild(createCard(getRandomItem(numDeckList), 'num', -1));
+            }
+        }
+
         function moveToStage(value, type, cardElement) {
             let slotIndex = -1;
             for(let i=0; i<stagingSlots.length; i++) {
@@ -578,13 +588,27 @@
 
         function discardStaged() {
             if (gameState.discardCount <= 0) { alert("No discards left!"); return; }
-            let hasCards = false;
+            
+            let varsUsed = 0;
+            let numsUsed = 0;
+
+            // Count and clear staged cards
             stagingSlots.forEach((slot, idx) => {
-                if(slot.var || slot.num) { hasCards = true; stagingSlots[idx].var = null; stagingSlots[idx].num = null; }
+                if(slot.var) { 
+                    varsUsed++; 
+                    stagingSlots[idx].var = null; 
+                }
+                if(slot.num) { 
+                    numsUsed++; 
+                    stagingSlots[idx].num = null; 
+                }
             });
-            if(!hasCards) { alert("Put cards in slots to discard."); return; }
-            varContainer.appendChild(createCard(getRandomItem(varDeckList), 'var', -1));
-            numContainer.appendChild(createCard(getRandomItem(numDeckList), 'num', -1));
+
+            if(varsUsed === 0 && numsUsed === 0) { alert("Put cards in slots to discard."); return; }
+
+            // Refill exact amount
+            refillCards(varsUsed, numsUsed);
+
             gameState.discardCount--;
             updateStagingUI();
             updateStatsUI();
@@ -596,8 +620,18 @@
             if (!formulaId) { alert("Please select a formula!"); return; }
 
             let assignments = {};
-            stagingSlots.forEach(slot => {
-                if (slot.var && slot.num) assignments[slot.var] = parseInt(slot.num);
+            let varsUsed = 0;
+            let numsUsed = 0;
+
+            // 1. Calculate & Count Used Cards
+            stagingSlots.forEach((slot, idx) => {
+                if (slot.var && slot.num) {
+                    assignments[slot.var] = parseInt(slot.num);
+                }
+                
+                // Track usage for refilling
+                if (slot.var) { varsUsed++; stagingSlots[idx].var = null; }
+                if (slot.num) { numsUsed++; stagingSlots[idx].num = null; }
             });
 
             let u = assignments['U'] || 0;
@@ -616,8 +650,12 @@
                 result = valSq < 0 ? 0 : Math.sqrt(valSq);
             }
 
+            // 2. Consume Hand
             gameState.handCount--;
-            stagingSlots = Array(5).fill().map(() => ({ var: null, num: null }));
+            
+            // 3. Refill exact amount of used cards
+            refillCards(varsUsed, numsUsed);
+
             updateStagingUI();
             updateStatsUI();
             animateFrog(result);
@@ -788,12 +826,13 @@
                     setTimeout(() => {
                         // Win Logic
                         if (Math.abs(calculatedVal - 300) < 10 || calculatedVal >= 300) { 
-                             // If overshot massively (e.g. > 350), maybe lose? For now, >= 300 is WIN as per request "over or equal"
                              handleWin();
                         } else if (gameState.handCount === 0) {
                              document.getElementById('game-over-modal').classList.remove('hidden');
                         } else {
-                            frog.x = startX; drawGame(); dealInitialCards();
+                            // Reset frog position ONLY (Cards are already refilled in playHand)
+                            frog.x = startX; 
+                            drawGame(); 
                         }
                     }, 800);
                 }
